@@ -42,7 +42,7 @@ class Music_genre_CNN(torch.nn.Module):
         self.fc_one = torch.nn.Linear(y_len * x_len, output_dim)
         
         # here we use output_dim to denote number of classes of generes. 
-        self.fc_teo = torch.nn.Linear(x_len, output_dim)
+        self.fc_two = torch.nn.Linear(x_len, output_dim)
         
     def forward(self, x):
         

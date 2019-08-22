@@ -36,25 +36,25 @@ class Music_genre_CNN(torch.nn.Module):
     
     def __init__(self, x_len, y_len, kernel, stride_len, pad, output_dim):
         super(Music_genre_CNN, self).__init__()
-        self.conv1 = torch.nn.Conv2d(x_len, y_len, kernel_size=kernel, stride=stride_len, padding=pad)
-        self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        self.conv_one = torch.nn.Conv2d(x_len, y_len, kernel_size=kernel, stride=stride_len, padding=pad)
+        self.poo_one = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
         
-        self.fc1 = torch.nn.Linear(y_len * x_len, output_dim)
+        self.fc_one = torch.nn.Linear(y_len * x_len, output_dim)
         
         # here we use output_dim to denote number of classes of generes. 
-        self.fc2 = torch.nn.Linear(x_len, output_dim)
+        self.fc_teo = torch.nn.Linear(x_len, output_dim)
         
     def forward(self, x):
         
         # sequential steps of forward musical input in network
-        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv_one(x))
         
         # pooling layer
         x = self.pool(x)
         
-        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc_one(x))
         
-        x = self.fc2(x)
+        x = self.fc_two(x)
         return(x)
 
 

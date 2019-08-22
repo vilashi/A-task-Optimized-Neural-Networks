@@ -14,75 +14,85 @@ present in the cochlea, and with a compressive nonlinearity
 applied to the amplitude in each time-frequency bin. "
 
 -- kelletal - 2018
+
+The file contains sperate neural networks optimized 
+and trained to perform particular task only (here one for Music-genre classification
+and word classification)self.fc_two(out4)
+        
 """
 
-from torch import nn
+#Importing necessary library functions
+import numpy as np
 import torch
+import torchvision
+import torchvision.transforms as transforms
 
-# Convolutional neural network (two convolutional layers)
-class ConvNet(nn.Module):
-    def __init__(self, num_classes=10):
-        super(ConvNet, self).__init__()
-        self.layer1 = nn.Sequential(
-            nn.Conv2d(1, 16, kernel_size=5, stride=1, padding=2),
-            nn.BatchNorm2d(16),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2))
-        self.layer2 = nn.Sequential(
-            nn.Conv2d(16, 32, kernel_size=5, stride=1, padding=2),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=2, stride=2))
-        self.fc = nn.Linear(7*7*32, num_classes)
+# Defining CNN for music genre classification
+
+from torch.autograd import Variable
+import torch.nn.functional as F
+
+class Music_genre_CNN(torch.nn.Module):
+    
+    def __init__(self, x_len, y_len, kernel, stride_len, pad, output_dim):
+        super(Music_genre_CNN, self).__init__()
+        self.conv1 = torch.nn.Conv2d(x_len, y_len, kernel_size=kernel, stride=stride_len, padding=pad)
+        self.pool = torch.nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
+        
+        self.fc1 = torch.nn.Linear(y_len * x_len, output_dim)
+        
+        # here we use output_dim to denote number of classes of generes. 
+        self.fc2 = torch.nn.Linear(x_len, output_dim)
         
     def forward(self, x):
-        out = self.layer1(x)
-        out = self.layer2(out)
-        out = out.reshape(out.size(0), -1)
-        out = self.fc(out)
-        return out
-
-model = ConvNet(num_classes).to(device)
-
-# Loss and optimizer
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-# Train the model
-total_step = len(train_loader)
-for epoch in range(num_epochs):
-    for i, (images, labels) in enumerate(train_loader):
-        images = images.to(device)
-        labels = labels.to(device)
         
-        # Forward pass
-        outputs = model(images)
-        loss = criterion(outputs, labels)
+        # sequential steps of forward musical input in network
+        x = F.relu(self.conv1(x))
         
-        # Backward and optimize
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        # pooling layer
+        x = self.pool(x)
         
-        if (i+1) % 100 == 0:
-            print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
-                   .format(epoch+1, num_epochs, i+1, total_step, loss.item()))
+        x = F.relu(self.fc1(x))
+        
+        x = self.fc2(x)
+        return(x)
 
-# Test the model
-model.eval()                        # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
-with torch.no_grad():
-    correct = 0
-    total = 0
-    for images, labels in test_loader:
-        images = images.to(device)
-        labels = labels.to(device)
-        outputs = model(images)
-        _, predicted = torch.max(outputs.data, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
 
-    print('Test Accuracy of the model on the 10000 test images: {} %'.format(100 * correct / total))
+class Word_prediction(torch.nn.Module):
+    
+    # CNN for word classification
+    # Reference: https://adventuresinmachinelearning.com/convolutional-neural-networks-tutorial-in-pytorch/
+    def __init__(self):
+        super(Word_prediction, self).__init__()
+        self.layer_one = torch.nn.Sequential(torch.nn.Conv2d(1, 32, kernel_size=3, stride=1, padding=2),torch.nn.MaxPool2d(kernel_size=3, stride=2))
+        self.layer_two = torch.nn.Sequential(torch.nn.Conv2d(32, 64, kernel_size=5, stride=1, padding=2),torch.nn.MaxPool2d(kernel_size=2, stride=2))
+        self.fc_one = torch.nn.Linear()
+        self.fc_two = torch.nn.Linear()
+    
+    def forward(self, x):
+        out1 = self.layer_one(x)
+        out2 = self.layer_two(out1)
+        out3 = out2.reshape(out2.size(0), -1)
+        out4 = self.fc_one(out3)
+        return self.fc_two(out4)
+        
 
-# Save the model checkpoint
-torch.save(model.state_dict(), 'model.ckpt')
+#Dataset decorator and dataloader
 
+class Cochelogram_Dataset(torch.utils.data.Dataset):
+    
+    def __init__(self, dir = 'Datasets/data_all.npz'):
+        # Load dataset from Numpy archive
+        X = np.load(dir)
+        # Load Input data from each classes stored as dictionary
+        # Remeber: Order here does not matter as we do different class classification
+        self.samples = np.concatenate((X['z'], X['s'], X['f'], X['n'], X['o']))
+        # Prepare class labels
+        self.labels = np.concatenate((np.repeat(1.0, 100), np.repeat(2.0, 100), np.repeat(3.0, 100), np.repeat(4.0, 100), np.repeat(5.0, 100)))
+
+    def __len__(self):
+        return self.samples.shape[0]
+
+    # getter for the dataset
+    def __getitem__(self, index):
+        return self.samples[index], self.labels[index]
